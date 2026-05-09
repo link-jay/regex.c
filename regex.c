@@ -159,76 +159,66 @@ NFA compile_nfa(char* dst) {
     if (strchr(Sym, dst[i]) != NULL) {
       enum Op prev_sym, sym = trans_op(dst[i]);
       ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
-      if (Op_Priory[prev_sym] >= Op_Priory[sym]) {
+      NFA a, b, c;
+      while (Op_Priory[prev_sym] >= Op_Priory[sym]) {
 	switch (prev_sym) {
-	  NFA a, b, c;
 	case NUL:
 	  break;
 	case CONCAT:
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
 	  c = nfa_concat(a, b);
-	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
-	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
 	  break;
 	case UNION:
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
 	  c = nfa_union(a, b);
-	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
-	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
 	  break;
 	case CLOSURE:
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
 	  c = nfa_closure(a);
-	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
-	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
 	  break;
 	case PLUS:
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
 	  c = nfa_plus(a);
-	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
-	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
 	  break;
 	}
-      } else {
-	ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
-	ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
+	ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
+	ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       }
+      ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
+      ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
     } else {
       ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, create_nfa_single(dst[i]));
     }
   }
   enum Op sym;
   ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
+  NFA a, b, c;
   while (sym != NUL) {
     switch (sym) {
-      NFA a, b, c;
     case NUL:
       break;
     case CONCAT:
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
       c = nfa_concat(a, b);
-      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
       break;
     case UNION:
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
       c = nfa_union(a, b);
-      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
       break;
     case CLOSURE:
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
       c = nfa_closure(a);
-      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
       break;
     case PLUS:
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
       c = nfa_plus(a);
-      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
       break;
     }
+    ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
     ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
   }
   NFA res;
