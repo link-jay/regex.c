@@ -11,27 +11,31 @@
 
 #define epsilon '\0'
 
-char* Sym = "&|*+";
+char* Left_Sym = "(";
+char* Right_Sym = "*+)";
+char* Mid_Sym = "&|";
+char* Sym = "&|*+()";
 
-enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS};
+enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS, LP, RP};
 
-int Op_Priory[] = {0, 2, 1, 3, 3};
-  
+int Op_Priory[] = {-1, 2, 1, 3, 3, 0, 9};
+bool can_cat(char left, char right) {
+  if (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL) return false;
+  if (strchr(Left_Sym, left) != NULL) return false;
+  if (strchr(Right_Sym, right) != NULL) return false;
+  return true;
+}
+
 char* parse_src(char* src) {
   struct {size_t len; size_t cap; char* str;} dst = {0, 32, NULL};
   dst.str = calloc(dst.cap, sizeof(char));
   size_t src_len = strlen(src);
   ARRAY_PUSH(dst.str, dst.len, dst.cap, src[0]);
   for (size_t i = 1; i < src_len; i++) {
-    if (strchr(Sym, src[i]) == NULL && strchr(Sym, dst.str[dst.len - 1]) == NULL) {
+    if (can_cat(dst.str[dst.len - 1], src[i])) {
       ARRAY_PUSH(dst.str, dst.len, dst.cap, '&');
       ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
-    }
-    else if (dst.str[dst.len - 1] == '*' || dst.str[dst.len - 1] == '+') {
-      ARRAY_PUSH(dst.str, dst.len, dst.cap, '&');
-      ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
-    }
-    else {
+    } else {
       ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
     }
   }
@@ -144,47 +148,68 @@ static inline enum Op trans_op(char sym) {
     return CLOSURE;
   case '+':
     return PLUS;
+  case '(':
+    return LP;
+  case ')':
+    return RP;
   }
   assert(0);
   return NUL;
 }
 
+typedef struct {size_t len; size_t cap; enum Op* stack;} Sym_Stack;
+typedef struct {size_t len; size_t cap; NFA* stack;} Nfa_Stack;
+
+NFA nfa_compile(Sym_Stack *sym_stack, Nfa_Stack *nfa_stack, enum Op sym) {
+  NFA a, b, c;
+  switch (sym) {
+  case NUL:
+  case LP:
+    assert(0);
+    break;
+  case RP:
+    ARRAY_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
+    while (sym != LP) {
+      c = nfa_compile(sym_stack, nfa_stack, sym);
+      ARRAY_PUSH(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
+      ARRAY_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
+    }
+    break;
+  case CONCAT:
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    c = nfa_concat(a, b);
+    break;
+  case UNION:
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    c = nfa_union(a, b);
+    break;
+  case CLOSURE:
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    c = nfa_closure(a);
+    break;
+  case PLUS:
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    c = nfa_plus(a);
+    break;
+  }
+  return c;
+};
+
 NFA compile_nfa(char* dst) {
-  struct {size_t len; size_t cap; enum Op* stack;} sym_stack = {0, 8, NULL};
+  Sym_Stack sym_stack = {0, 8, NULL};
   sym_stack.stack = calloc(8, sizeof(enum Op));	/* NOTE: it's enough for now at least */
   ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, NUL);
-  struct {size_t len; size_t cap; NFA* stack;} nfa_stack = {0, 8, NULL};
+  Nfa_Stack nfa_stack = {0, 8, NULL};
   nfa_stack.stack = calloc(8, sizeof(NFA));	/* NOTE: it's enough for now at least */
   for (size_t i = 0; i < strlen(dst); i++) {
     if (strchr(Sym, dst[i]) != NULL) {
       enum Op prev_sym, sym = trans_op(dst[i]);
       ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
-      NFA a, b, c;
       while (Op_Priory[prev_sym] >= Op_Priory[sym]) {
-	switch (prev_sym) {
-	case NUL:
-	  assert(0);
-	  break;
-	case CONCAT:
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-	  c = nfa_concat(a, b);
-	  break;
-	case UNION:
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-	  c = nfa_union(a, b);
-	  break;
-	case CLOSURE:
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-	  c = nfa_closure(a);
-	  break;
-	case PLUS:
-	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-	  c = nfa_plus(a);
-	  break;
-	}
-	ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
+	NFA nfa = nfa_compile(&sym_stack, &nfa_stack, prev_sym);
+	ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, nfa);
 	ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       }
       ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
@@ -195,31 +220,9 @@ NFA compile_nfa(char* dst) {
   }
   enum Op sym;
   ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
-  NFA a, b, c;
   while (sym != NUL) {
-    switch (sym) {
-    case NUL:
-      break;
-    case CONCAT:
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-      c = nfa_concat(a, b);
-      break;
-    case UNION:
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-      c = nfa_union(a, b);
-      break;
-    case CLOSURE:
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-      c = nfa_closure(a);
-      break;
-    case PLUS:
-      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
-      c = nfa_plus(a);
-      break;
-    }
-    ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
+    NFA nfa = nfa_compile(&sym_stack, &nfa_stack, sym);
+    ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, nfa);
     ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
   }
   NFA res;
@@ -365,10 +368,10 @@ bool regex_match(char* pattern, char* src) {
 }
 
 int main() {
-  char* dst = parse_src("a+bc");
+  char* dst = parse_src("(ab)*c");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf("%s\n", nfa_match(nfa, "aaabc") ? "true" : "false");
+  printf("%s\n", nfa_match(nfa, "c") ? "true" : "false");
   dfs_free_nfa(nfa.start);
   free(dst);
   
@@ -382,6 +385,8 @@ int main() {
   assert(regex_match(".*", "aaa"));
   assert(regex_match("a+bc", "aaabc"));
   assert(!regex_match("a+bc", "bc"));
+  assert(regex_match("(ab)*c", "c"));
+  assert(regex_match("(ab)+c", "abababc"));
   
   return 0;
 }
