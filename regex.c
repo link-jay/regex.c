@@ -238,6 +238,11 @@ bool nfa_match(NFA nfa, char* src) {
 	     current_states.set[j]->cap,
 	     ((char[]){src[i], '\0'}),
 	     sts);
+      HT_GET(current_states.set[j]->next_state, /* NOTE: 不论输入什么符号, '.'都一定会被匹配，实现通配符 */
+	     current_states.set[j]->len,
+	     current_states.set[j]->cap,
+	     ((char[]){'.', '\0'}),
+	     sts);
       if (sts == NULL) continue;
       else {
 	for (size_t k = 0; k < sts->len; k++) {
@@ -329,6 +334,7 @@ int main() {
   assert(regex_match("abc", "abc"));
   assert(regex_match("ab|c", "ab"));
   assert(regex_match("ab|c", "c"));
+  assert(regex_match(".bc", "abc"));
   
   return 0;
 }
