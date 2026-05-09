@@ -174,6 +174,7 @@ NFA nfa_compile(Sym_Stack *sym_stack, Nfa_Stack *nfa_stack, enum Op sym) {
       ARRAY_PUSH(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
       ARRAY_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
     }
+    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
     break;
   case CONCAT:
     ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
@@ -207,7 +208,7 @@ NFA compile_nfa(char* dst) {
     if (strchr(Sym, dst[i]) != NULL) {
       enum Op prev_sym, sym = trans_op(dst[i]);
       ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
-      while (Op_Priory[prev_sym] >= Op_Priory[sym]) {
+      while (Op_Priory[prev_sym] >= Op_Priory[sym] && sym != LP) {
 	NFA nfa = nfa_compile(&sym_stack, &nfa_stack, prev_sym);
 	ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, nfa);
 	ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
@@ -368,10 +369,10 @@ bool regex_match(char* pattern, char* src) {
 }
 
 int main() {
-  char* dst = parse_src("(ab)*c");
+  char* dst = parse_src("a(bc)+");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf("%s\n", nfa_match(nfa, "c") ? "true" : "false");
+  printf("%s\n", nfa_match(nfa, "abcbc") ? "true" : "false");
   dfs_free_nfa(nfa.start);
   free(dst);
   
@@ -384,8 +385,10 @@ int main() {
   assert(regex_match("a*bc", "bc"));
   assert(regex_match(".*", "aaa"));
   assert(regex_match("a+bc", "aaabc"));
+  assert(regex_match("abc+", "abccc"));
   assert(!regex_match("a+bc", "bc"));
   assert(regex_match("(ab)*c", "c"));
+  assert(regex_match("a(bc)+", "abcbcbc"));
   assert(regex_match("(ab)+c", "abababc"));
   
   return 0;
