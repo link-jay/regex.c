@@ -11,11 +11,11 @@
 
 #define epsilon '\0'
 
-char* Sym = "&|*";
+char* Sym = "&|*+";
 
-enum Op {NUL, CONCAT, UNION, CLOSURE};
+enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS};
 
-int Op_Priory[] = {0, 2, 1, 3};
+int Op_Priory[] = {0, 2, 1, 3, 3};
   
 char* parse_src(char* src) {
   struct {size_t len; size_t cap; char* str;} dst = {0, 32, NULL};
@@ -27,7 +27,7 @@ char* parse_src(char* src) {
       ARRAY_PUSH(dst.str, dst.len, dst.cap, '&');
       ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
     }
-    else if (dst.str[dst.len - 1] == '*') {
+    else if (dst.str[dst.len - 1] == '*' || dst.str[dst.len - 1] == '+') {
       ARRAY_PUSH(dst.str, dst.len, dst.cap, '&');
       ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
     }
@@ -129,6 +129,11 @@ NFA nfa_closure(NFA a) {
   return create_nfa(start, end);
 }
 
+NFA nfa_plus(NFA a) {
+  add_line(a.end, epsilon, a.start);
+  return a;
+}
+
 static inline enum Op trans_op(char sym) {
   switch (sym) {
   case '&':
@@ -137,6 +142,8 @@ static inline enum Op trans_op(char sym) {
     return UNION;
   case '*':
     return CLOSURE;
+  case '+':
+    return PLUS;
   }
   assert(0);
   return NUL;
@@ -177,6 +184,12 @@ NFA compile_nfa(char* dst) {
 	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
 	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
 	  break;
+	case PLUS:
+	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
+	  c = nfa_plus(a);
+	  ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
+	  ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
+	  break;
 	}
       } else {
 	ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
@@ -208,6 +221,11 @@ NFA compile_nfa(char* dst) {
     case CLOSURE:
       ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
       c = nfa_closure(a);
+      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
+      break;
+    case PLUS:
+      ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, a);
+      c = nfa_plus(a);
       ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, c);
       break;
     }
@@ -285,6 +303,7 @@ bool nfa_match(NFA nfa, char* src) {
     current_states = epsilon_closure_set(next_states);
     if (current_states.len == 0) {
       free(current_states.set);
+      free(next_states.set);
       return false;
     }
     free(next_states.set);
@@ -355,10 +374,10 @@ bool regex_match(char* pattern, char* src) {
 }
 
 int main() {
-  char* dst = parse_src("a*bc");
+  char* dst = parse_src("a+bc");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf("%s\n", nfa_match(nfa, "abc") ? "true" : "false");
+  printf("%s\n", nfa_match(nfa, "aaabc") ? "true" : "false");
   dfs_free_nfa(nfa.start);
   free(dst);
   
@@ -366,9 +385,12 @@ int main() {
   assert(regex_match("ab|c", "ab"));
   assert(regex_match("ab|c", "c"));
   assert(regex_match(".bc", "abc"));
+  assert(regex_match(".*bc", "aaabc"));
   assert(regex_match("a*bc", "aaabc"));
   assert(regex_match("a*bc", "bc"));
   assert(regex_match(".*", "aaa"));
+  assert(regex_match("a+bc", "aaabc"));
+  assert(!regex_match("a+bc", "bc"));
   
   return 0;
 }

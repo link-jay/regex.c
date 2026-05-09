@@ -2,7 +2,7 @@
 
 epsilon = ""
 
-Syms = [epsilon, "&", "|", "*", "+", "(", ")"]
+Syms = [epsilon, "&", "|", "*", "+"]
 Syms_ucon = [epsilon, "&", "|"]
 Sym_Priory = {
     epsilon: 0,
@@ -10,9 +10,6 @@ Sym_Priory = {
     "|": 2,
     "*": 3,
     "+": 3,
-    # NOTE: 括号语法并没有实现
-    "(": 0,
-    ")": 9
 }
 
 class NfaState:
@@ -72,13 +69,7 @@ class NfaParser:
 def parse_src(src: str) -> str:
     dst: list = [""]
     for i in range(len(src)):
-        if src[i] == "(":
-            dst.append("&")
-            dst.append(src[i])
-        elif src[i] == ")":
-            dst.append(src[i])
-            dst.append("&")
-        elif src[i] == "*" or src[i] == "+":
+        if src[i] == "*" or src[i] == "+":
             if i < len(src) - 1:
                 dst.append(src[i])
                 dst.append("&")
