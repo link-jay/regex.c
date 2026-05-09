@@ -163,6 +163,7 @@ NFA compile_nfa(char* dst) {
       while (Op_Priory[prev_sym] >= Op_Priory[sym]) {
 	switch (prev_sym) {
 	case NUL:
+	  assert(0);
 	  break;
 	case CONCAT:
 	  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, b);
