@@ -140,30 +140,30 @@ static NFA nfa_compile(Sym_Stack *sym_stack, Nfa_Stack *nfa_stack, enum Op sym) 
     assert(0);
     break;
   case RP:
-    ARRAY_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
+    NOSHRINK_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
     while (sym != LP) {
       c = nfa_compile(sym_stack, nfa_stack, sym);
       ARRAY_PUSH(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
-      ARRAY_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
+      NOSHRINK_POP(sym_stack->stack, sym_stack->len, sym_stack->cap, sym);
     }
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, c);
     break;
   case CONCAT:
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
     c = nfa_concat(a, b);
     break;
   case UNION:
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, b);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
     c = nfa_union(a, b);
     break;
   case CLOSURE:
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
     c = nfa_closure(a);
     break;
   case PLUS:
-    ARRAY_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
+    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
     c = nfa_plus(a);
     break;
   }
@@ -172,18 +172,18 @@ static NFA nfa_compile(Sym_Stack *sym_stack, Nfa_Stack *nfa_stack, enum Op sym) 
 
 NFA compile_nfa(char* dst) {
   Sym_Stack sym_stack = {0, 8, NULL};
-  sym_stack.stack = calloc(8, sizeof(enum Op));	/* NOTE: it's enough for now at least */
+  sym_stack.stack = calloc(8, sizeof(enum Op));
   ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, NUL);
   Nfa_Stack nfa_stack = {0, 8, NULL};
-  nfa_stack.stack = calloc(8, sizeof(NFA));	/* NOTE: it's enough for now at least */
+  nfa_stack.stack = calloc(8, sizeof(NFA));
   for (size_t i = 0; i < strlen(dst); i++) {
     if (strchr(Sym, dst[i]) != NULL) {
       enum Op prev_sym, sym = trans_op(dst[i]);
-      ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
+      NOSHRINK_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       while (Op_Priory[prev_sym] >= Op_Priory[sym] && sym != LP) {
 	NFA nfa = nfa_compile(&sym_stack, &nfa_stack, prev_sym);
 	ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, nfa);
-	ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
+	NOSHRINK_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       }
       ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
@@ -192,14 +192,14 @@ NFA compile_nfa(char* dst) {
     }
   }
   enum Op sym;
-  ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
+  NOSHRINK_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
   while (sym != NUL) {
     NFA nfa = nfa_compile(&sym_stack, &nfa_stack, sym);
     ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, nfa);
-    ARRAY_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
+    NOSHRINK_POP(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
   }
   NFA res;
-  ARRAY_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, res);
+  NOSHRINK_POP(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, res);
   free(sym_stack.stack);
   free(nfa_stack.stack);
   return res;
@@ -212,7 +212,7 @@ static Set epsilon_closure(NfaState* state) {
   ARRAY_PUSH(closure.set, closure.len, closure.cap, state);
   while (stack.len > 0) {
     NfaState* current_state;
-    ARRAY_POP(stack.set, stack.len, stack.cap, current_state);
+    NOSHRINK_POP(stack.set, stack.len, stack.cap, current_state);
     Set* next_state = &(Set){0, 0, NULL};
     HT_GET(current_state->next_state, current_state->len, current_state->cap, ((char[]){epsilon, '\0'}), next_state);
     for (size_t i = 0; i < next_state->len; i++) {

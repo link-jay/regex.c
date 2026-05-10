@@ -29,3 +29,12 @@
     }							        \
     (len)--;							\
   } while(0)
+
+#define NOSHRINK_POP(arr, len, cap, var)	\
+  do {						\
+    if ((cap) == 0) {				\
+      break;					\
+    }						\
+    (var) = (arr)[--(len)];			\
+  } while(0)
+
