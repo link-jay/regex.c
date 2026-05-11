@@ -12,10 +12,10 @@
 
 #define epsilon '\0'
 
-char* Left_Sym = "(";
-char* Right_Sym = "*+)";
+char* Left_Sym = "([";
+char* Right_Sym = "*+)]";
 char* Mid_Sym = "&|";
-char* Sym = "&|*+()";
+char* Sym = "&|*+()[]";
 
 enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS, LP, RP};
 
@@ -27,19 +27,77 @@ static inline bool can_cat(char left, char right) {
   return true;
 }
 
-char* parse_src(char* src) {
-  struct {size_t len; size_t cap; char* str;} dst = {0, 32, NULL};
-  dst.str = calloc(dst.cap, sizeof(char));
-  size_t src_len = strlen(src);
-  ARRAY_PUSH(dst.str, dst.len, dst.cap, src[0]);
-  for (size_t i = 1; i < src_len; i++) {
-    if (can_cat(dst.str[dst.len - 1], src[i])) {
-      ARRAY_PUSH(dst.str, dst.len, dst.cap, '&');
-      ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
+typedef struct {size_t len; size_t cap; char* str;} Pattern;
+static char* _parse_src(Pattern *dst, char* src, char cat_sym, bool is_root) {
+  for (; src[0] != '\0'; src++) {
+    if (can_cat(dst->str[dst->len - 1], src[0])) {
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, cat_sym);
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
     } else {
-      ARRAY_PUSH(dst.str, dst.len, dst.cap, src[i]);
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
     }
+    if (src[0] == ')') {
+      if (!is_root) return src;
+    };
+    if (src[0] == '(') src = _parse_src(dst, src+1, '&', false);
+    if (src[0] == ']') {
+      if (!is_root) return src;
+    }
+    if (src[0] == '[') src = _parse_src(dst, src+1, '|', false);
   }
+  if (is_root) {
+    for (size_t i = 0; i < dst->len; i++) {
+      if (dst->str[i] == '[') dst->str[i] = '(';
+      if (dst->str[i] == ']') dst->str[i] = ')';
+    }
+    ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
+  }
+  return src;
+}
+
+static char* ch_range(char left, char right) {
+  size_t range_len = right - left + 1;
+  struct {size_t len; size_t cap; char* str;} str = {0, 32, NULL};
+  str.str = calloc(str.cap, sizeof(char));
+  for (size_t i = 0; i < range_len; i++) {
+    ARRAY_PUSH(str.str, str.len, str.cap, left + i);
+  }
+  ARRAY_PUSH(str.str, str.len, str.cap, '\0');
+  return str.str;
+}
+
+static char* pre_parse_src(char* src) {
+  struct {size_t len; size_t cap; char* str;} str = {0, 32, NULL};
+  str.str = calloc(str.cap, sizeof(char));
+  size_t src_len = strlen(src);
+  bool trans_mode = false;
+  for (size_t i = 0; i < src_len; i++) {
+    if (src[i] == '[') trans_mode = true;
+    if (strchr("]()", src[i])) trans_mode = false;
+    if (trans_mode && src[i] == '-' && src[i-1] != '[') {
+      char* ch_class_range = ch_range(src[i-1], src[i+1]);
+      size_t range_len = strlen(ch_class_range);
+      ARRAY_DROP(str.str, str.len, str.cap);
+      for (size_t j = 0; j < range_len; j++) {
+	ARRAY_PUSH(str.str, str.len, str.cap, ch_class_range[j]);
+      }
+      free(ch_class_range);
+      i += 2;
+    }
+    ARRAY_PUSH(str.str, str.len, str.cap, src[i]);
+  }
+  ARRAY_PUSH(str.str, str.len, str.cap, '\0');
+  return str.str;
+}
+
+char* parse_src(char* origin_src) {
+  char* src = pre_parse_src(origin_src);
+  Pattern dst = {0, 32, NULL};
+  dst.str = calloc(dst.cap, sizeof(char));
+  ARRAY_PUSH(dst.str, dst.len, dst.cap, src[0]);
+  if (dst.str[0] == '[') _parse_src(&dst, src+1, '|', true);
+  else _parse_src(&dst, src+1, '&', true);
+  free(src);
   return dst.str;
 }
 
