@@ -15,10 +15,10 @@ void test(char* pattern, char* src[], size_t counts) {
 }
 
 int main() {
-  char* dst = parse_src("[1234567890]+");
+  char* dst = parse_src("[A-Z0-9]+");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf(nfa_match(nfa, "123") ? "true\n" : "false\n");
+  printf(nfa_match(nfa, "ABC") ? "true\n" : "false\n");
   dfs_free_nfa(nfa.start);
   free(dst);
   
@@ -51,6 +51,10 @@ int main() {
   assert(regex_match("a[bcd]", "ab"));
   assert(regex_match("[1234567890]+", "123"));
   assert(!regex_match("[(12)345]+", "134"));
+  assert(regex_match("[0-9]+", "123"));
+  assert(regex_match("[a-z]+", "abc"));
+  assert(regex_match("[a-z0-9]+", "abc123"));
+  assert(regex_match("[a-zA-Z0-9]+", "abcABC123"));
   
   puts("Success.");
   return 0;
