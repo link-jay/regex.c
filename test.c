@@ -15,7 +15,7 @@ void test(char* pattern, char* src[], size_t counts) {
 }
 
 int main() {
-  char* dst = parse_src("(1|2|3|4|5|6|7|8|9|0)+");
+  char* dst = parse_src("(1|2|3|4|5|6|7|8|9|0)*");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
   printf(nfa_match(nfa, "123") ? "true\n" : "false\n");
@@ -35,17 +35,9 @@ int main() {
   assert(regex_match("a*bc", "bc"));
   assert(regex_match(".*", "aaa"));
   assert(regex_match(".*", "abc"));
-  assert(regex_match("a+bc", "aaabc"));
-  assert(!regex_match("a+bc", "bc"));
-  assert(regex_match("abc+", "abccc"));
-  assert(!regex_match("abc+", "ab"));
   assert(regex_match("(ab)*c", "c"));
   assert(regex_match("(a|b)c", "bc"));
-  assert(regex_match("a(bc)+", "abcbcbc"));
-  assert(regex_match("(ab)+c", "abababc"));
-  assert(regex_match("a(bc|d)+", "abcbcbcddd"));
   assert(!regex_match("a(bc|d*)", "abcddd"));
-  assert(regex_match("(1|2|3|4|5|6|7|8|9|0)+", "123"));
   
   puts("Success.");
   return 0;

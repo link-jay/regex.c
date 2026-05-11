@@ -13,13 +13,13 @@
 #define epsilon '\0'
 
 char* Left_Sym = "(";
-char* Right_Sym = "*+)";
+char* Right_Sym = "*)";
 char* Mid_Sym = "&|";
-char* Sym = "&|*+()";
+char* Sym = "&|*()";
 
-enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS, LP, RP};
+enum Op {NUL, CONCAT, UNION, CLOSURE, LP, RP};
 
-int Op_Priory[] = {-1, 2, 1, 3, 3, 0, 9};
+int Op_Priory[] = {-1, 2, 1, 3, 0, 9};
 static inline bool can_cat(char left, char right) {
   if (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL) return false;
   if (strchr(Left_Sym, left) != NULL) return false;
@@ -105,11 +105,6 @@ static NFA nfa_closure(NFA a) {
   return create_nfa(start, end);
 }
 
-static NFA nfa_plus(NFA a) {
-  add_line(a.end, epsilon, a.start);
-  return a;
-}
-
 static inline enum Op trans_op(char sym) {
   switch (sym) {
   case '&':
@@ -118,8 +113,6 @@ static inline enum Op trans_op(char sym) {
     return UNION;
   case '*':
     return CLOSURE;
-  case '+':
-    return PLUS;
   case '(':
     return LP;
   case ')':
@@ -161,10 +154,6 @@ static NFA nfa_compile(Sym_Stack *sym_stack, Nfa_Stack *nfa_stack, enum Op sym) 
   case CLOSURE:
     NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
     c = nfa_closure(a);
-    break;
-  case PLUS:
-    NOSHRINK_POP(nfa_stack->stack, nfa_stack->len, nfa_stack->cap, a);
-    c = nfa_plus(a);
     break;
   }
   return c;
