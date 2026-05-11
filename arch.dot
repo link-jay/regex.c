@@ -28,6 +28,8 @@ digraph G {
 
 	"bool regex_match()" [shape=box]
 	"char* parse_src()" [shape=box]
+	"char* pre_parse_src()" [shape=box]
+	"char* _parse_src()" [shape=box]
 	"NFA compile_nfa()" [shape=box]
 	"bool nfa_match()" [shape=box]
 	"void dfs_free_nfa()" [shape=box]
