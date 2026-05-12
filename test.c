@@ -7,20 +7,20 @@ void test(char* pattern, char* src[], size_t counts) {
   printf("============\n%s: \n", pattern);
   NFA nfa = compile_regex(pattern);
   for (size_t i = 0; i < counts; i++) {
-    printf("%s\n", regex_match(nfa, src[i]) ? "true" : "false");
+    printf("%s: %s\n", src[i], regex_match(nfa, src[i]) ? "true" : "false");
   }
   free_regex(nfa);
 }
 
 int main() {
-  char* dst = parse_src("[A-Z0-9]+");
+  char* dst = parse_src("ab?c");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf(nfa_match(nfa, "ABC") ? "true\n" : "false\n");
+  printf(nfa_match(nfa, "ac") ? "true\n" : "false\n");
   dfs_free_nfa(nfa.start);
   free(dst);
   
-  test("[(12)345]+", ((char*[]){"123", "124", "13", "12"}), 4);
+  test("ab?c", ((char*[]){"ac", "abc", "c", "ab"}), 4);
   
   assert(re_match("abc", "abc"));
   assert(re_match("ab|c", "ab"));
@@ -55,6 +55,12 @@ int main() {
   assert(re_match("[a-zA-Z0-9]+", "abcABC123"));
   assert(re_match("[abc0-9]+", "aabc123"));
   assert(!re_match("[abc0-9]+", "d123"));
+  assert(re_match("ab?c", "ac"));
+  assert(re_match("ab?c", "abc"));
+  assert(re_match("a(bc)?d", "ad"));
+  assert(re_match("a(bc)?d", "abcd"));
+  assert(re_match("a(b|c)?d", "abd"));
+  assert(!re_match("a(b|c)?d", "abcd"));
   
   puts("Success.");
   return 0;
