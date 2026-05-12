@@ -1,36 +1,37 @@
 digraph G {
-	rankdir = TB
-	compound = true
-	"bool regex_match()" -> "char* parse_src()"
-		subgraph cluster_V {
-			 "char* pre_parse_src()" -> "char* _parse_src()"
-	}
-	"char* parse_src()" -> "char* pre_parse_src()" [lhead=cluster_V]
-	"char* _parse_src()" -> dst [ltail=cluster_V]
+    rankdir = TB
+    compound = true
+    "bool regex_match()" -> "char* parse_src()"
+    subgraph cluster_V {
+	"char* pre_parse_src()" -> "char* _parse_src()"
+    }
+    "char* parse_src()" -> "char* pre_parse_src()" [lhead=cluster_V]
+    "char* _parse_src()" -> dst [ltail=cluster_V]
 
-	dst -> "NFA compile_nfa()"
-	nfa -> "bool nfa_match()" -> "void dfs_free_nfa()"
-	"bool nfa_match()"-> res
-	subgraph cluster_T {
-		 "NFA nfa_concat()" [shape=box]
-		 "NFA nfa_union()" [shape=box]
-		 "NFA nfa_closure()" [shape=box]
-		 "NFA nfa_plus()" [shape=box]
-	}
-	"NFA compile_nfa()" -> "NFA nfa_concat()" [lhead=cluster_T]
-	"NFA nfa_concat()" -> nfa [ltail=cluster_T]
+    dst -> "NFA compile_nfa()"
+    nfa -> "bool nfa_match()" -> "void dfs_free_nfa()"
+    "bool nfa_match()"-> res
+    subgraph cluster_T {
+	"NFA nfa_concat()" [shape=box]
+	"NFA nfa_union()" [shape=box]
+	"NFA nfa_closure()" [shape=box]
+	"NFA nfa_plus()" [shape=box]
+	"NFA nfa_optional()" [shape=box]
+    }
+    "NFA compile_nfa()" -> "NFA nfa_concat()" [lhead=cluster_T]
+    "NFA nfa_concat()" -> nfa [ltail=cluster_T]
 
-	subgraph cluster_G {
-		 "void collect_nodes()" [shape=box]
-		 "void free_collect_nodes()" [shape=box]
-	}
-	"void dfs_free_nfa()" -> "void collect_nodes()" [lhead=cluster_G]
+    subgraph cluster_G {
+	"void collect_nodes()" [shape=box]
+	"void free_collect_nodes()" [shape=box]
+    }
+    "void dfs_free_nfa()" -> "void collect_nodes()" [lhead=cluster_G]
 
-	"bool regex_match()" [shape=box]
-	"char* parse_src()" [shape=box]
-	"char* pre_parse_src()" [shape=box]
-	"char* _parse_src()" [shape=box]
-	"NFA compile_nfa()" [shape=box]
-	"bool nfa_match()" [shape=box]
-	"void dfs_free_nfa()" [shape=box]
+    "bool regex_match()" [shape=box]
+    "char* parse_src()" [shape=box]
+    "char* pre_parse_src()" [shape=box]
+    "char* _parse_src()" [shape=box]
+    "NFA compile_nfa()" [shape=box]
+    "bool nfa_match()" [shape=box]
+    "void dfs_free_nfa()" [shape=box]
 }
