@@ -4,14 +4,12 @@
 #include "regex.h"
 
 void test(char* pattern, char* src[], size_t counts) {
-  char* dst = parse_src(pattern);
-  printf("============\n%s: \n", dst);
-  NFA nfa = compile_nfa(dst);
+  printf("============\n%s: \n", pattern);
+  NFA nfa = compile_regex(pattern);
   for (size_t i = 0; i < counts; i++) {
-    printf("%s\n", nfa_match(nfa, src[i]) ? "true" : "false");
+    printf("%s\n", regex_match(nfa, src[i]) ? "true" : "false");
   }
-  dfs_free_nfa(nfa.start);
-  free(dst);
+  free_regex(nfa);
 }
 
 int main() {
@@ -22,39 +20,41 @@ int main() {
   dfs_free_nfa(nfa.start);
   free(dst);
   
-  /* test("[(12)345]+", ((char*[]){"123", "124", "13", "12"}), 4); */
+  test("[(12)345]+", ((char*[]){"123", "124", "13", "12"}), 4);
   
-  assert(regex_match("abc", "abc"));
-  assert(regex_match("ab|c", "ab"));
-  assert(regex_match("ab|c", "c"));
-  assert(!regex_match("ab|c", "abc"));
-  assert(regex_match(".", "a"));
-  assert(regex_match(".bc", "abc"));
-  assert(regex_match(".*bc", "aaabc"));
-  assert(regex_match("a*bc", "aaabc"));
-  assert(regex_match("a*bc", "bc"));
-  assert(regex_match(".*", "aaa"));
-  assert(regex_match(".*", "abc"));
-  assert(regex_match("a+bc", "aaabc"));
-  assert(!regex_match("a+bc", "bc"));
-  assert(regex_match("abc+", "abccc"));
-  assert(!regex_match("abc+", "ab"));
-  assert(regex_match("(ab)*c", "c"));
-  assert(regex_match("(a|b)c", "bc"));
-  assert(regex_match("a(bc)+", "abcbcbc"));
-  assert(regex_match("(ab)+c", "abababc"));
-  assert(regex_match("a(bc|d)+", "abcbcbcddd"));
-  assert(!regex_match("a(bc|d*)", "abcddd"));
-  assert(regex_match("(1|2|3|4|5|6|7|8|9|0)+", "123"));
-  assert(regex_match(".*abc.*", "123123123abc123123123"));
-  assert(!regex_match(".*abc.*", "123123123bc123123123"));
-  assert(regex_match("a[bcd]", "ab"));
-  assert(regex_match("[1234567890]+", "123"));
-  assert(!regex_match("[(12)345]+", "134"));
-  assert(regex_match("[0-9]+", "123"));
-  assert(regex_match("[a-z]+", "abc"));
-  assert(regex_match("[a-z0-9]+", "abc123"));
-  assert(regex_match("[a-zA-Z0-9]+", "abcABC123"));
+  assert(re_match("abc", "abc"));
+  assert(re_match("ab|c", "ab"));
+  assert(re_match("ab|c", "c"));
+  assert(!re_match("ab|c", "abc"));
+  assert(re_match(".", "a"));
+  assert(re_match(".bc", "abc"));
+  assert(re_match(".*bc", "aaabc"));
+  assert(re_match("a*bc", "aaabc"));
+  assert(re_match("a*bc", "bc"));
+  assert(re_match(".*", "aaa"));
+  assert(re_match(".*", "abc"));
+  assert(re_match("a+bc", "aaabc"));
+  assert(!re_match("a+bc", "bc"));
+  assert(re_match("abc+", "abccc"));
+  assert(!re_match("abc+", "ab"));
+  assert(re_match("(ab)*c", "c"));
+  assert(re_match("(a|b)c", "bc"));
+  assert(re_match("a(bc)+", "abcbcbc"));
+  assert(re_match("(ab)+c", "abababc"));
+  assert(re_match("a(bc|d)+", "abcbcbcddd"));
+  assert(!re_match("a(bc|d*)", "abcddd"));
+  assert(re_match("(1|2|3|4|5|6|7|8|9|0)+", "123"));
+  assert(re_match(".*abc.*", "123123123abc123123123"));
+  assert(!re_match(".*abc.*", "123123123bc123123123"));
+  assert(re_match("a[bcd]", "ab"));
+  assert(re_match("[1234567890]+", "123"));
+  assert(!re_match("[(12)345]+", "134"));
+  assert(re_match("[0-9]+", "123"));
+  assert(re_match("[a-z]+", "abc"));
+  assert(re_match("[a-z0-9]+", "abc123"));
+  assert(re_match("[a-zA-Z0-9]+", "abcABC123"));
+  assert(re_match("[abc0-9]+", "aabc123"));
+  assert(!re_match("[abc0-9]+", "d123"));
   
   puts("Success.");
   return 0;

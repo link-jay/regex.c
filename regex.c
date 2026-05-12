@@ -45,13 +45,7 @@ static char* _parse_src(Pattern *dst, char* src, char cat_sym, bool is_root) {
     }
     if (src[0] == '[') src = _parse_src(dst, src+1, '|', false);
   }
-  if (is_root) {
-    for (size_t i = 0; i < dst->len; i++) {
-      if (dst->str[i] == '[') dst->str[i] = '(';
-      if (dst->str[i] == ']') dst->str[i] = ')';
-    }
-    ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
-  }
+  if (is_root) ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
   return src;
 }
 
@@ -178,8 +172,10 @@ static inline enum Op trans_op(char sym) {
     return CLOSURE;
   case '+':
     return PLUS;
+  case '[':
   case '(':
     return LP;
+  case ']':
   case ')':
     return RP;
   }
@@ -389,11 +385,26 @@ void dfs_free_nfa(NfaState* head) {
   free(nodes.set);
 }
 
-bool regex_match(char* pattern, char* src) {
+bool re_match(char* pattern, char* src) {
   char* dst = parse_src(pattern);
   NFA nfa = compile_nfa(dst);
   bool res = nfa_match(nfa, src);
   dfs_free_nfa(nfa.start);
   free(dst);
   return res;
+}
+
+NFA compile_regex(char* src) {
+  char* dst = parse_src(src);
+  NFA nfa = compile_nfa(dst);
+  free(dst);
+  return nfa;
+}
+
+bool regex_match(NFA nfa, char* string) {
+  return nfa_match(nfa, string);
+}
+
+void free_regex(NFA nfa) {
+  dfs_free_nfa(nfa.start);
 }

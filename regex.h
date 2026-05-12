@@ -33,4 +33,7 @@ char* parse_src(char*);
 NFA compile_nfa(char*);
 bool nfa_match(NFA, char*);
 void dfs_free_nfa(NfaState*);
-bool regex_match(char*, char*);
+bool re_match(char*, char*);
+NFA compile_regex(char*);
+bool regex_match(NFA, char*);
+void free_regex(NFA);
