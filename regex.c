@@ -112,7 +112,7 @@ static NfaState* create_nfastate(bool is_end) {
   a->is_end = is_end;
   a->freed = false;
   a->len = 0;
-  a->cap = 2;
+  a->cap = 4;
   a->next_state = calloc(a->cap, sizeof(KV*));
   return a;
 }
