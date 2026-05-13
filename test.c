@@ -13,10 +13,10 @@ void test(char* pattern, char* src[], size_t counts) {
 }
 
 int main() {
-  char* dst = parse_src("ab?c");
+  char* dst = parse_src("ab\\\\c");
   printf("%s\n", dst);
   NFA nfa = compile_nfa(dst);
-  printf(nfa_match(nfa, "ac") ? "true\n" : "false\n");
+  printf(nfa_match(nfa, "ab\\c") ? "true\n" : "false\n");
   dfs_free_nfa(nfa.start);
   free(dst);
   
@@ -61,6 +61,10 @@ int main() {
   assert(re_match("a(bc)?d", "abcd"));
   assert(re_match("a(b|c)?d", "abd"));
   assert(!re_match("a(b|c)?d", "abcd"));
+  assert(re_match("ab\\|c", "ab|c"));
+  assert(re_match("ab\\&\\?\\*c", "ab&?*c"));
+  assert(re_match("ab\\[\\(c", "ab[(c"));
+  assert(re_match("ab\\\\c", "ab\\c"));
   
   puts("Success.");
   return 0;
