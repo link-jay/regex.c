@@ -12,7 +12,8 @@
 
 #define epsilon '\0'
 
-char* Left_Sym = "([";
+/* NOTE: not all symbols are here */
+char* Left_Sym = "\\([";
 char* Right_Sym = "*+)]?";
 char* Mid_Sym = "&|";
 char* Sym = "&|*+()[]?";
@@ -20,30 +21,40 @@ char* Sym = "&|*+()[]?";
 enum Op {NUL, CONCAT, UNION, CLOSURE, PLUS, LP, RP, OPTIONAL};
 
 int Op_Priory[] = {-1, 2, 1, 3, 3, 0, 9, 3};
-static inline bool can_cat(char left, char right) {
-  if (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL) return false;
-  if (strchr(Left_Sym, left) != NULL) return false;
+
+typedef struct {size_t len; size_t cap; char* str;} Pattern;
+
+static inline bool is_trans(Pattern* dst) {
+  if (dst->len > 1 && dst->str[dst->len - 2] == '\\') {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static inline bool can_cat(char left, char right, bool is_trans) {
+  if (!is_trans && (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL)) return false;
+  if (!is_trans && strchr(Left_Sym, left) != NULL) return false;
   if (strchr(Right_Sym, right) != NULL) return false;
   return true;
 }
 
-typedef struct {size_t len; size_t cap; char* str;} Pattern;
 static char* _parse_src(Pattern *dst, char* src, char cat_sym, bool is_root) {
   for (; src[0] != '\0'; src++) {
-    if (can_cat(dst->str[dst->len - 1], src[0])) {
+    if (can_cat(dst->str[dst->len - 1], src[0], is_trans(dst))) {
       ARRAY_PUSH(dst->str, dst->len, dst->cap, cat_sym);
       ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
     } else {
       ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
     }
-    if (src[0] == ')') {
+    if (src[0] == ')' && !is_trans(dst)) {
       if (!is_root) return src;
     };
-    if (src[0] == '(') src = _parse_src(dst, src+1, '&', false);
-    if (src[0] == ']') {
+    if (src[0] == '(' && !is_trans(dst)) src = _parse_src(dst, src+1, '&', false);
+    if (src[0] == ']' && !is_trans(dst)) {
       if (!is_root) return src;
     }
-    if (src[0] == '[') src = _parse_src(dst, src+1, '|', false);
+    if (src[0] == '[' && !is_trans(dst)) src = _parse_src(dst, src+1, '|', false);
   }
   if (is_root) ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
   return src;
@@ -257,7 +268,12 @@ NFA compile_nfa(char* dst) {
       }
       ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, prev_sym);
       ARRAY_PUSH(sym_stack.stack, sym_stack.len, sym_stack.cap, sym);
-    } else {
+    }
+    else if (dst[i] == '\\') {
+      i++;
+      ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, create_nfa_single(dst[i]));
+    }
+    else {
       ARRAY_PUSH(nfa_stack.stack, nfa_stack.len, nfa_stack.cap, create_nfa_single(dst[i]));
     }
   }
