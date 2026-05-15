@@ -32,34 +32,6 @@ static inline bool is_trans(Pattern* dst) {
   }
 }
 
-static inline bool can_cat(char left, char right, bool is_trans) {
-  if (!is_trans && (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL)) return false;
-  if (!is_trans && strchr(Left_Sym, left) != NULL) return false;
-  if (strchr(Right_Sym, right) != NULL) return false;
-  return true;
-}
-
-static char* _parse_src(Pattern *dst, char* src, char cat_sym, bool is_root) {
-  for (; src[0] != '\0'; src++) {
-    if (can_cat(dst->str[dst->len - 1], src[0], is_trans(dst))) {
-      ARRAY_PUSH(dst->str, dst->len, dst->cap, cat_sym);
-      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
-    } else {
-      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
-    }
-    if (src[0] == ')' && !is_trans(dst)) {
-      if (!is_root) return src;
-    };
-    if (src[0] == '(' && !is_trans(dst)) src = _parse_src(dst, src+1, '&', false);
-    if (src[0] == ']' && !is_trans(dst)) {
-      if (!is_root) return src;
-    }
-    if (src[0] == '[' && !is_trans(dst)) src = _parse_src(dst, src+1, '|', false);
-  }
-  if (is_root) ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
-  return src;
-}
-
 static char* ch_range(char left, char right) {
   size_t range_len = right - left + 1;
   struct {size_t len; size_t cap; char* str;} str = {0, 32, NULL};
@@ -93,6 +65,34 @@ static char* pre_parse_src(char* src) {
   }
   ARRAY_PUSH(str.str, str.len, str.cap, '\0');
   return str.str;
+}
+
+static inline bool can_cat(char left, char right, bool is_trans) {
+  if (!is_trans && (strchr(Mid_Sym, left) != NULL || strchr(Mid_Sym, right) != NULL)) return false;
+  if (!is_trans && strchr(Left_Sym, left) != NULL) return false;
+  if (strchr(Right_Sym, right) != NULL) return false;
+  return true;
+}
+
+static char* _parse_src(Pattern *dst, char* src, char cat_sym, bool is_root) {
+  for (; src[0] != '\0'; src++) {
+    if (can_cat(dst->str[dst->len - 1], src[0], is_trans(dst))) {
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, cat_sym);
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
+    } else {
+      ARRAY_PUSH(dst->str, dst->len, dst->cap, src[0]);
+    }
+    if (src[0] == ')' && !is_trans(dst)) {
+      if (!is_root) return src;
+    };
+    if (src[0] == '(' && !is_trans(dst)) src = _parse_src(dst, src+1, '&', false);
+    if (src[0] == ']' && !is_trans(dst)) {
+      if (!is_root) return src;
+    }
+    if (src[0] == '[' && !is_trans(dst)) src = _parse_src(dst, src+1, '|', false);
+  }
+  if (is_root) ARRAY_PUSH(dst->str, dst->len, dst->cap, '\0');
+  return src;
 }
 
 char* parse_src(char* origin_src) {
